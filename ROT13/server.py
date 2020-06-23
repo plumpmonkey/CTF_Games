@@ -6,14 +6,19 @@ HOST = 'localhost'
 PORT = 8000
 SOCKET_TIMEOUT = 90
 
-# This function handles reading data sent by a client, echoing it back
-# and closing the connection in case of timeout (30s) or "quit" command
-# This function is meant to be started in a separate thread
-# (one thread per client)
+# This function handles reading data sent by a client.
+# Repeatedly sends back a ROT13 encoded string unless the client sends a ROT13
+# encoded string saying "Send Flag", in which ase a ROT13 encoded flag is returned.
+# The connection is closed in case of timeout (90s) or "quit" command
+# This function is meant to be started in a separate thread (one thread per client)
 def handle_client(client_connection, client_address):
+
+    # Setup socket timeout
     client_connection.settimeout(SOCKET_TIMEOUT)
+
     try:
         while True:
+            # Define the initial string to be encoded and sent back to the client.
             s = "To receive the flag, respond with ROT13 encoded text saying 'Send Flag'\n"
             enc_s = encode(s, 'rot13')
             client_connection.send(enc_s.encode('utf-8'))
@@ -21,12 +26,16 @@ def handle_client(client_connection, client_address):
             # Receive data from client
             data = client_connection.recv(1024)
 
-            print('Recevied from:- {}:{} - {}'.format(client_address[0], client_address[1], data))
+            print('Received from:- {}:{} - {}'.format(client_address[0], client_address[1], data))
 
+            # Decode the received data from binary to text and then rot-13 decode it.
             d = data.decode('utf-8')
             decoded = decode(d, 'rot13')
 
+            # Check if the response is what we expect
             if decoded == "Send Flag\n" or decoded == "Send Flag\r\n":
+
+                # Encode the flag and send it.
                 s = 'Flag{Well_Done_You_Speak_ROT13}\n'
                 enc_s = encode(s, 'rot-13')
 
@@ -65,6 +74,7 @@ def listen(host, port):
     # Once the new thread has taken over, wait for the next client.
     while True:
         current_connection, client_address = connection.accept()
+
         print('Client IP:- {}:{} connected'.format(client_address[0], client_address[1]))
 
         handler_thread = threading.Thread(target=handle_client,
